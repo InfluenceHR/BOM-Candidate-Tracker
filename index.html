@@ -36,13 +36,12 @@
   .gate-input { flex: 1; background: var(--white); border: 1.5px solid var(--border-dark); border-radius: 6px; padding: 0.62rem 0.85rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; transition: border-color 0.18s; }
   .gate-input:focus { outline: none; border-color: var(--purple); }
   .gate-input::placeholder { color: var(--text-dim); font-family: 'Inter', sans-serif; }
-  .gate-btn { padding: 0.62rem 1.3rem; background: var(--purple); color: #fff; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.18s; box-shadow: 0 2px 8px rgba(90,26,110,0.25); }
+  .gate-btn { padding: 0.62rem 1.3rem; background: var(--purple); color: #fff; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.18s; }
   .gate-btn:hover { background: var(--purple-light); }
   .gate-error { font-size: 0.72rem; color: var(--red); margin-top: 0.35rem; display: none; }
   .gate-error.show { display: block; }
   .gate-note { font-size: 0.67rem; color: var(--text-dim); margin-top: 0.75rem; line-height: 1.55; }
   .gate-note a { color: var(--purple); text-decoration: none; }
-  .gate-note a:hover { text-decoration: underline; }
 
   #app { display: none; }
   #app.visible { display: block; }
@@ -59,10 +58,20 @@
   .header-pill:hover { background: rgba(255,255,255,0.18); }
   .export-pill { background: rgba(212,168,67,0.2); border-color: rgba(212,168,67,0.4); color: var(--gold-light); }
   .export-pill:hover { background: rgba(212,168,67,0.3); }
+  .sync-pill { background: rgba(45,158,90,0.2); border-color: rgba(45,158,90,0.4); color: #7ecba1; }
+  .sync-pill:hover { background: rgba(45,158,90,0.3); }
 
-  /* ── SAVE INDICATOR ── */
-  .save-toast { position: fixed; bottom: 1.25rem; right: 1.25rem; background: var(--green-dark); color: #fff; font-size: 0.72rem; padding: 0.5rem 1rem; border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 500; opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.3s; z-index: 200; pointer-events: none; }
-  .save-toast.show { opacity: 1; transform: translateY(0); }
+  /* ── SYNC STATUS BAR ── */
+  .sync-bar { background: var(--green-dark); color: #fff; font-size: 0.7rem; text-align: center; padding: 4px; font-family: 'Inter', sans-serif; display: none; }
+  .sync-bar.visible { display: block; }
+  .sync-bar.error { background: var(--red); }
+  .sync-bar.syncing { background: var(--blue); }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 1.25rem; right: 1.25rem; color: #fff; font-size: 0.72rem; padding: 0.5rem 1rem; border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 500; opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.3s; z-index: 200; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast-success { background: var(--green-dark); }
+  .toast-error { background: var(--red); }
 
   /* ── TABS ── */
   .tabs-bar { background: var(--white); border-bottom: 2px solid var(--border); padding: 0 1.75rem; display: flex; align-items: flex-end; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
@@ -80,9 +89,10 @@
   .stat-num { font-family: 'Playfair Display', serif; font-size: 1.2rem; line-height: 1; color: var(--text); }
   .stat-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
   .stat-divider { width: 1px; height: 28px; background: var(--border); }
+  .last-sync { font-size: 0.62rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-left: auto; }
 
   /* ── MAIN ── */
-  .main { display: grid; grid-template-columns: 1fr 360px; min-height: calc(100vh - 128px); }
+  .main { display: grid; grid-template-columns: 1fr 360px; min-height: calc(100vh - 130px); }
   .list-panel { padding: 1.4rem 1.75rem; overflow-y: auto; border-right: 1px solid var(--border); }
   .list-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; }
   .list-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--text); line-height: 1.2; }
@@ -204,8 +214,7 @@
 </head>
 <body>
 
-<!-- SAVE TOAST -->
-<div class="save-toast" id="save-toast">✓ Progress saved</div>
+<div class="toast toast-success" id="toast"></div>
 
 <!-- API GATE -->
 <div id="api-gate">
@@ -218,7 +227,7 @@
       </div>
     </div>
     <div class="gate-title">Enter Your API Key to Continue</div>
-    <div class="gate-sub">This tool uses Claude AI to score and rank candidates. You need a free Anthropic API key. Your key is stored only in your browser and never shared.</div>
+    <div class="gate-sub">This tool uses Claude AI to score and rank candidates. Enter your Anthropic API key to get started. Candidate data is shared automatically with your whole team.</div>
     <div class="gate-steps">
       <div class="gate-steps-title">How to get your free API key</div>
       <div class="gate-step"><span class="gate-step-num">1.</span> Go to <strong>platform.anthropic.com</strong> and create a free account</div>
@@ -233,6 +242,7 @@
     <div class="gate-error" id="gate-error">Please enter a valid API key starting with sk-ant-</div>
     <div class="gate-note">
       🔒 Your key saves in your browser — you won't need to re-enter it next time.<br>
+      📡 Candidate data is shared in real time with your whole BOM team.<br>
       Each resume analysis costs roughly <strong>$0.01–$0.02</strong>.<br>
       Need help? Contact <a href="mailto:mwalker@theinfluencehr.com">mwalker@theinfluencehr.com</a>
     </div>
@@ -241,6 +251,7 @@
 
 <!-- MAIN APP -->
 <div id="app">
+  <div class="sync-bar" id="sync-bar"></div>
   <header>
     <div class="brand">
       <div class="brand-mark">B</div>
@@ -251,8 +262,9 @@
     </div>
     <div class="header-right">
       <div class="header-date" id="header-date"></div>
+      <div class="header-pill sync-pill" onclick="loadCandidates()">↻ Refresh</div>
       <div class="header-pill export-pill" onclick="exportCSV()">⬇ Export CSV</div>
-      <div class="header-pill" onclick="changeApiKey()" title="Click to change API key">🔑 API Key Active</div>
+      <div class="header-pill" onclick="changeApiKey()">🔑 API Key</div>
     </div>
   </header>
 
@@ -277,6 +289,7 @@
     <div class="stat"><div class="stat-num" id="stat-interview">0</div><div class="stat-label">Interviewing</div></div>
     <div class="stat-divider"></div>
     <div class="stat"><div class="stat-num" id="stat-finalist">0</div><div class="stat-label">Finalists</div></div>
+    <div class="last-sync" id="last-sync"></div>
   </div>
 
   <div class="main">
@@ -305,8 +318,8 @@
       </div>
       <div id="candidate-list">
         <div class="list-empty">
-          <div class="list-empty-icon">📂</div>
-          <div class="list-empty-text">No candidates yet.<br>Click <strong>+ Add Candidate</strong> to get started.</div>
+          <div class="list-empty-icon">⏳</div>
+          <div class="list-empty-text">Loading candidates...</div>
         </div>
       </div>
     </div>
@@ -321,12 +334,12 @@
   </div>
 </div>
 
-<!-- ADD CANDIDATE MODAL -->
+<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
     <div class="modal-title">Add Candidate</div>
-    <div class="modal-sub">Enter the candidate's name, select the role, then paste their resume. Claude AI will score them across all four BOM criteria in about 15 seconds.</div>
+    <div class="modal-sub">Enter the candidate's name, select the role, then paste their resume. Claude AI will score them and save to the shared team database.</div>
     <div class="form-group">
       <label class="form-label">Candidate Full Name *</label>
       <input type="text" class="form-input" id="input-name" placeholder="e.g. Jordan Williams">
@@ -346,7 +359,6 @@
     <div class="form-group">
       <label class="form-label">Diversity / Recruiter Note &nbsp;<span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0">(optional)</span></label>
       <input type="text" class="form-input" id="input-diversity" placeholder="e.g. HBCU graduate, first-generation professional, multilingual...">
-      <div class="form-hint">Add context supporting BOM's diversity commitment that the resume may not capture.</div>
     </div>
     <div class="loading-box" id="loading-box">
       <div class="spinner"></div>
@@ -361,265 +373,301 @@
 </div>
 
 <script>
+// ── SUPABASE CONFIG ───────────────────────────────────────────
+const SB_URL = 'https://nlalrpuivnznrvgliimp.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sYWxycHVpdm56bnJ2Z2xpaW1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDk2MjIsImV4cCI6MjA5MDEyNTYyMn0.Z6E_HmU601n2oH2jkWT_UtCR-p_bJQ-lLuxvpHJW0iw';
+const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+async function sbGet() {
+  const res = await fetch(`${SB_URL}/rest/v1/candidates?select=*&order=added_at.asc`, { headers: SB_HEADERS });
+  if (!res.ok) throw new Error('Failed to load candidates from database.');
+  return res.json();
+}
+
+async function sbInsert(row) {
+  const res = await fetch(`${SB_URL}/rest/v1/candidates`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(row) });
+  if (!res.ok) { const e = await res.text(); throw new Error('Failed to save candidate: ' + e); }
+}
+
+async function sbUpdate(id, patch) {
+  const res = await fetch(`${SB_URL}/rest/v1/candidates?id=eq.${id}`, { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(patch) });
+  if (!res.ok) throw new Error('Failed to update candidate.');
+}
+
+async function sbDelete(id) {
+  const res = await fetch(`${SB_URL}/rest/v1/candidates?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS });
+  if (!res.ok) throw new Error('Failed to delete candidate.');
+}
+
+// ── JOB DESCRIPTIONS ─────────────────────────────────────────
 const JD_BD=`ROLE: Senior Business Development Executive | Company: Black Onyx Management (BOM) | Location: Washington D.C. Hybrid | Salary: $90,000 base + 20% commission
 ABOUT BOM: Research-informed, mission-driven consulting firm. Expertise in research, organizational development, communications, nonprofit strategy, data analytics, philanthropy advisory. Partners with government agencies, foundations, and CBOs. Led by a team of academics. Committed to equity, community, systemic change.
-RESPONSIBILITIES: Lead national BD targeting federal agencies, foundations, policy orgs, research institutions. Identify, cultivate, close new client relationships via outreach, networking, proposals, pipeline management. Manage HubSpot pipeline; use Apollo for prospecting. Develop proposals, capability statements, presentations. Represent BOM at national conferences. Report directly to CEO. Drive applied research, evaluation, data analytics sales.
-REQUIRED: 5+ years BD/sales/strategic partnerships (consulting, research, or mission-driven preferred). Demonstrated success securing/growing client relationships in federal, nonprofit, or philanthropic context. Strong understanding of D.C. landscape and government-adjacent decision-making. Proven track record meeting/exceeding revenue targets. Excellent written/verbal communication. HubSpot and Apollo proficiency. Self-directed, entrepreneurial, comfortable without heavy infrastructure. Commitment to BOM equity and community values.
-CULTURE (HEAVILY WEIGHTED): BOM is a team of academics — advanced degrees, research backgrounds, intellectual rigor are critical. Entrepreneurial spirit and go-getter attitude are essential. Equity-centered mindset. Comfortable with ambiguity. Diversity of background is strongly valued.`;
+RESPONSIBILITIES: Lead national BD targeting federal agencies, foundations, policy orgs, research institutions. Identify, cultivate, close new client relationships. Manage HubSpot pipeline; use Apollo for prospecting. Develop proposals and presentations. Represent BOM at national conferences. Report directly to CEO. Drive applied research, evaluation, data analytics sales.
+REQUIRED: 5+ years BD/sales/strategic partnerships. Demonstrated success in federal, nonprofit, or philanthropic context. Strong D.C. landscape knowledge. Proven revenue track record. Excellent communication. HubSpot and Apollo proficiency. Self-directed and entrepreneurial. Commitment to BOM equity values.
+CULTURE (HEAVILY WEIGHTED): BOM is a team of academics — advanced degrees, research backgrounds, intellectual rigor are critical. Entrepreneurial spirit and go-getter attitude essential. Equity-centered mindset. Diversity of background strongly valued.`;
 
-const JD_ACCT=`ROLE: Senior Accountant / Accounting Manager | Company: Black Onyx Management (BOM) | Location: Indianapolis IN In-Office Required | Salary: $75,000–$90,000
-ABOUT BOM: Research-informed, community-focused consulting firm founded 2019. Benefit corporation merging business success with community impact. Led by a team of academics.
-RESPONSIBILITIES: Core Accounting 40%: Own GL, reconciliations, month-end close; lead automation and process improvements; manage AP/AR. Financial Planning & Cost Control 30%: Cost control monitoring; revenue/expense projections; financial modeling; scenario planning; proactive spending forecasting. Project Financial Management 20%: Proposal financial review; project invoicing; revenue recognition; profitability tracking. Client-Facing & BD 10%: Help design accounting/finance services for external clients; client presentations.
-REQUIRED: Bachelor's in Accounting or Finance. 5+ years progressive accounting experience. Strong ownership mindset and proactive approach. Financial forecasting, budgeting, variance analysis experience. Project-based accounting and revenue recognition. Analytical skills. Strong communication for non-financial stakeholders. Proficiency with accounting software and advanced Excel.
-PREFERRED: CPA or active progress toward CPA. Professional services or consulting experience. Process improvement and automation track record. Financial modeling. Client-facing or BD exposure. Experience building/scaling finance functions.
-CULTURE (HEAVILY WEIGHTED): BOM is a team of academics — advanced degrees and intellectual curiosity are critical. Entrepreneurial spirit essential. Equity-centered mindset. Proactive and self-directed. Diversity of background is strongly valued.`;
+const JD_ACCT=`ROLE: Senior Accountant / Accounting Manager | Company: Black Onyx Management (BOM) | Location: Indianapolis IN In-Office | Salary: $75,000–$90,000
+ABOUT BOM: Research-informed, community-focused consulting firm. Benefit corporation led by a team of academics committed to community impact.
+RESPONSIBILITIES: Core Accounting 40%: Own GL, reconciliations, month-end close; lead automation; manage AP/AR. Financial Planning 30%: Cost control; revenue/expense projections; financial modeling; proactive forecasting. Project Finance 20%: Proposal financial review; invoicing; revenue recognition; profitability tracking. Client-Facing 10%: Help design accounting services for external clients.
+REQUIRED: Bachelor's in Accounting/Finance. 5+ years progressive accounting experience. Strong ownership mindset. Financial forecasting and budgeting experience. Project-based accounting. Analytical skills. Strong communication for non-financial stakeholders. Advanced Excel.
+PREFERRED: CPA or progress toward CPA. Professional services experience. Process improvement track record. Financial modeling. Client-facing exposure. Experience building finance functions.
+CULTURE (HEAVILY WEIGHTED): BOM is a team of academics — advanced degrees and intellectual curiosity critical. Entrepreneurial spirit essential. Equity-centered mindset. Proactive and self-directed. Diversity of background strongly valued.`;
 
-let candidates={bd:[],acct:[]};
-let currentTab='bd',currentFilter='all',selectedId=null,isAnalyzing=false,apiKey='';
+// ── STATE ─────────────────────────────────────────────────────
+let candidates = { bd: [], acct: [] };
+let currentTab = 'bd', currentFilter = 'all', selectedId = null, isAnalyzing = false, apiKey = '';
+let autoRefreshInterval = null;
 
-// ── STORAGE ───────────────────────────────────────────────────
-function saveData(){
-  try{
-    // Don't save resumeText to keep storage lean
-    const toSave={
-      bd: candidates.bd.map(c=>({...c,resumeText:''})),
-      acct: candidates.acct.map(c=>({...c,resumeText:''}))
-    };
-    localStorage.setItem('bom_candidates',JSON.stringify(toSave));
-    showToast();
-  }catch(e){ console.warn('Save failed:',e); }
+// ── TOAST ─────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast toast-${type} show`;
+  setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-function loadData(){
-  try{
-    const saved=localStorage.getItem('bom_candidates');
-    if(saved){ candidates=JSON.parse(saved); }
-  }catch(e){ console.warn('Load failed:',e); }
+function setSyncBar(msg, type='') {
+  const b = document.getElementById('sync-bar');
+  if (!msg) { b.classList.remove('visible'); return; }
+  b.textContent = msg; b.className = 'sync-bar visible' + (type ? ' ' + type : '');
 }
 
-function showToast(){
-  const t=document.getElementById('save-toast');
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2000);
+// ── API KEY GATE ──────────────────────────────────────────────
+function initApiKey() {
+  const saved = localStorage.getItem('bom_api_key');
+  if (saved && saved.startsWith('sk-ant-')) { apiKey = saved; showApp(); }
 }
 
-// ── API KEY ───────────────────────────────────────────────────
-function initApiKey(){
-  const saved=localStorage.getItem('bom_api_key');
-  if(saved&&saved.startsWith('sk-ant-')){ apiKey=saved; loadData(); showApp(); }
+function submitApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val || !val.startsWith('sk-ant-')) { document.getElementById('gate-error').classList.add('show'); return; }
+  apiKey = val;
+  localStorage.setItem('bom_api_key', val);
+  showApp();
 }
 
-function submitApiKey(){
-  const val=document.getElementById('api-key-input').value.trim();
-  if(!val||!val.startsWith('sk-ant-')){ document.getElementById('gate-error').classList.add('show'); return; }
-  apiKey=val;
-  localStorage.setItem('bom_api_key',val);
-  loadData(); showApp();
-}
+document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitApiKey(); });
 
-document.getElementById('api-key-input').addEventListener('keydown',e=>{ if(e.key==='Enter') submitApiKey(); });
-
-function showApp(){
+function showApp() {
   document.getElementById('api-gate').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
-  document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  renderList();
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  loadCandidates();
+  // Auto-refresh every 60 seconds to pick up changes from other users
+  autoRefreshInterval = setInterval(loadCandidates, 60000);
 }
 
-function changeApiKey(){
-  if(!confirm('Change your API key? You will be returned to the login screen.')) return;
-  localStorage.removeItem('bom_api_key'); apiKey='';
-  document.getElementById('api-key-input').value='';
+function changeApiKey() {
+  if (!confirm('Change your API key?')) return;
+  clearInterval(autoRefreshInterval);
+  localStorage.removeItem('bom_api_key'); apiKey = '';
+  document.getElementById('api-key-input').value = '';
   document.getElementById('api-gate').classList.remove('hidden');
   document.getElementById('app').classList.remove('visible');
 }
 
-// ── CSV EXPORT ────────────────────────────────────────────────
-function exportCSV(){
-  const all=[...candidates.bd,...candidates.acct];
-  if(all.length===0){ alert('No candidates to export yet.'); return; }
-
-  const headers=['Rank','Name','Role','Total Score','Grade','Fit Level','Qualifications /25','Entrepreneurial /25','Academic /25','Mission & Equity /25','Status','Headline','Strengths','Gaps','Entrepreneurial Evidence','Academic Highlight','Mission Note','AI Recommendation','Diversity Note','Date Added','Recruiter Notes'];
-
-  const roleRanks={bd:{},acct:{}};
-  candidates.bd.forEach((c,i)=>roleRanks.bd[c.id]=i+1);
-  candidates.acct.forEach((c,i)=>roleRanks.acct[c.id]=i+1);
-
-  const rows=all.map(c=>{
-    const a=c.analysis,s=a.scores;
-    const rank=roleRanks[c.role][c.id]||'';
-    const roleName=c.role==='bd'?'Sr. Business Development Executive':'Sr. Accountant / Accounting Manager';
-    return [
-      rank, c.name, roleName, a.total, a.grade, a.fitLevel,
-      s.qualifications, s.entrepreneurial, s.academic, s.mission,
-      c.status, a.headline,
-      (a.strengths||[]).join(' | '),
-      (a.gaps||[]).join(' | '),
-      a.entrepreneurialEvidence||'',
-      a.academicHighlight||'',
-      a.missionNote||'',
-      a.hiringRecommendation||'',
-      c.diversityNote||'',
-      new Date(c.addedAt).toLocaleDateString(),
-      c.notes||''
-    ].map(v=>'"'+String(v).replace(/"/g,'""')+'"');
-  });
-
-  const csv=[headers.map(h=>'"'+h+'"').join(','), ...rows.map(r=>r.join(','))].join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='BOM_Candidates_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+// ── LOAD FROM SUPABASE ────────────────────────────────────────
+async function loadCandidates() {
+  setSyncBar('Syncing with team database...', 'syncing');
+  try {
+    const rows = await sbGet();
+    candidates = { bd: [], acct: [] };
+    rows.forEach(row => {
+      const c = {
+        id: row.id, name: row.name, role: row.role,
+        status: row.status, notes: row.notes || '',
+        diversityNote: row.diversity_note || '',
+        analysis: row.analysis,
+        addedAt: row.added_at
+      };
+      if (candidates[row.role]) candidates[row.role].push(c);
+    });
+    sortCandidates('bd'); sortCandidates('acct');
+    setSyncBar('');
+    document.getElementById('last-sync').textContent = 'Last synced ' + new Date().toLocaleTimeString();
+    renderList();
+  } catch(err) {
+    setSyncBar('⚠ Could not reach database — showing cached data', 'error');
+    setTimeout(() => setSyncBar(''), 4000);
+  }
 }
 
 // ── TABS ──────────────────────────────────────────────────────
-function switchTab(tab){
-  currentTab=tab; selectedId=null;
-  document.getElementById('tab-bd').className='tab-btn'+(tab==='bd'?' active-bd':'');
-  document.getElementById('tab-acct').className='tab-btn'+(tab==='acct'?' active-acct':'');
-  const t=document.getElementById('list-title');
+function switchTab(tab) {
+  currentTab = tab; selectedId = null;
+  document.getElementById('tab-bd').className = 'tab-btn'+(tab==='bd'?' active-bd':'');
+  document.getElementById('tab-acct').className = 'tab-btn'+(tab==='acct'?' active-acct':'');
+  const t = document.getElementById('list-title');
   if(tab==='bd') t.innerHTML='Senior Business Development Executive<small>Ranked by AI analysis · Washington D.C. (Hybrid) · $90K base + commission</small>';
   else t.innerHTML='Senior Accountant / Accounting Manager<small>Ranked by AI analysis · Indianapolis, IN (In-Office) · $75K–$90K</small>';
-  document.getElementById('input-role').value=tab;
+  document.getElementById('input-role').value = tab;
   showEmptyDetail(); renderList();
 }
 
-function setFilter(f,btn){
-  currentFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active'); renderList();
 }
 
 // ── MODAL ─────────────────────────────────────────────────────
-function openModal(){
+function openModal() {
   clearError();
   document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById('input-role').value=currentTab;
-  setTimeout(()=>document.getElementById('input-name').focus(),120);
+  document.getElementById('input-role').value = currentTab;
+  setTimeout(() => document.getElementById('input-name').focus(), 120);
 }
 
-function closeModal(){
-  if(isAnalyzing) return;
+function closeModal() {
+  if (isAnalyzing) return;
   document.getElementById('modal-overlay').classList.remove('open');
-  document.getElementById('input-name').value='';
-  document.getElementById('input-resume').value='';
-  document.getElementById('input-diversity').value='';
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-resume').value = '';
+  document.getElementById('input-diversity').value = '';
   document.getElementById('loading-box').classList.remove('active');
   resetBtn(); clearError();
 }
 
-document.getElementById('modal-overlay').addEventListener('click',e=>{
-  if(e.target===document.getElementById('modal-overlay')) closeModal();
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
 
-function resetBtn(){ const b=document.getElementById('analyze-btn'); b.disabled=false; b.innerHTML='⚡ Analyze &amp; Add'; document.getElementById('cancel-btn').disabled=false; }
-function showError(msg){ const b=document.getElementById('error-box'); b.innerHTML=msg; b.classList.add('visible'); }
-function clearError(){ const b=document.getElementById('error-box'); b.innerHTML=''; b.classList.remove('visible'); }
+function resetBtn() { const b=document.getElementById('analyze-btn'); b.disabled=false; b.innerHTML='⚡ Analyze &amp; Add'; document.getElementById('cancel-btn').disabled=false; }
+function showError(msg) { const b=document.getElementById('error-box'); b.innerHTML=msg; b.classList.add('visible'); }
+function clearError() { const b=document.getElementById('error-box'); b.innerHTML=''; b.classList.remove('visible'); }
 
 // ── ANALYZE ───────────────────────────────────────────────────
-async function analyzeCandidate(){
+async function analyzeCandidate() {
   clearError();
-  const name=document.getElementById('input-name').value.trim();
-  const resume=document.getElementById('input-resume').value.trim();
-  const role=document.getElementById('input-role').value;
-  const diversityNote=document.getElementById('input-diversity').value.trim();
+  const name = document.getElementById('input-name').value.trim();
+  const resume = document.getElementById('input-resume').value.trim();
+  const role = document.getElementById('input-role').value;
+  const diversityNote = document.getElementById('input-diversity').value.trim();
 
-  if(!name){ showError('Please enter the candidate\'s full name.'); return; }
-  if(!resume){ showError('Please paste the candidate\'s resume text.'); return; }
-  if(resume.split(/\s+/).length<20){ showError('The pasted text is too short. Please paste more of the resume.<br><br>Tip: Open PDF → Select All (Ctrl+A) → Copy → Paste here. If garbled, ask for a Word doc version.'); return; }
+  if (!name) { showError('Please enter the candidate\'s full name.'); return; }
+  if (!resume) { showError('Please paste the candidate\'s resume text.'); return; }
+  if (resume.split(/\s+/).length < 20) { showError('The pasted text is too short. Please paste more of the resume.<br><br>Tip: Open PDF → Select All (Ctrl+A) → Copy → Paste here. If garbled, ask for a Word doc version.'); return; }
 
-  isAnalyzing=true;
-  document.getElementById('analyze-btn').disabled=true;
-  document.getElementById('analyze-btn').innerHTML='<span style="display:inline-block;width:13px;height:13px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.75s linear infinite;vertical-align:middle;margin-right:5px"></span>Analyzing...';
-  document.getElementById('cancel-btn').disabled=true;
+  isAnalyzing = true;
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('analyze-btn').innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.75s linear infinite;vertical-align:middle;margin-right:5px"></span>Analyzing...';
+  document.getElementById('cancel-btn').disabled = true;
   document.getElementById('loading-box').classList.add('active');
-  document.getElementById('loading-text').textContent='Reading resume and scoring against BOM job description...';
+  document.getElementById('loading-text').textContent = 'Reading resume and scoring against BOM job description...';
 
-  const jd=role==='bd'?JD_BD:JD_ACCT;
-  const systemPrompt=`You are an expert HR analyst for Black Onyx Management (BOM), a mission-driven consulting firm led by a team of academics committed to equity and systemic change.
+  const jd = role === 'bd' ? JD_BD : JD_ACCT;
+  const systemPrompt = `You are an expert HR analyst for Black Onyx Management (BOM), a mission-driven consulting firm led by a team of academics committed to equity and systemic change.
 Score the candidate on FOUR dimensions, 25 points each (total 100):
 1. QUALIFICATIONS MATCH (0-25): Years of relevant experience, required skills, education, role-specific expertise
-2. ENTREPRENEURIAL SPIRIT (0-25): Evidence of initiative, self-direction, building from scratch, go-getter behavior, comfort with ambiguity, ownership mindset, proactive problem-solving
-3. ACADEMIC CREDENTIALS (0-25): Advanced degrees, research experience, published work, academic affiliations, intellectual rigor, certifications — BOM is a team of academics, heavily weighted
+2. ENTREPRENEURIAL SPIRIT (0-25): Evidence of initiative, self-direction, building from scratch, go-getter behavior, comfort with ambiguity, ownership mindset
+3. ACADEMIC CREDENTIALS (0-25): Advanced degrees, research experience, published work, academic affiliations, intellectual rigor — BOM is a team of academics, heavily weighted
 4. MISSION & EQUITY ALIGNMENT (0-25): Commitment to equity, nonprofit/mission-driven experience, DEI work, community focus, social impact, values alignment with BOM
-Respond ONLY with valid JSON. No markdown, no explanation, no preamble:
+Respond ONLY with valid JSON, no markdown, no preamble:
 {"scores":{"qualifications":0,"entrepreneurial":0,"academic":0,"mission":0},"total":0,"grade":"A","headline":"one punchy sentence max 12 words","fitLevel":"Strong Fit","strengths":["strength 1","strength 2","strength 3"],"gaps":["gap 1","gap 2"],"entrepreneurialEvidence":"specific evidence or None evident","academicHighlight":"best academic credential or Standard credentials","missionNote":"equity alignment or Limited evidence","hiringRecommendation":"2-3 sentence recommendation with interview talking points"}`;
 
-  const userPrompt=`JOB DESCRIPTION:\n${jd}\n\nCANDIDATE: ${name}${diversityNote?'\nDIVERSITY NOTE: '+diversityNote:''}\n\nRESUME:\n${resume}`;
+  const userPrompt = `JOB DESCRIPTION:\n${jd}\n\nCANDIDATE: ${name}${diversityNote?'\nDIVERSITY NOTE: '+diversityNote:''}\n\nRESUME:\n${resume}`;
 
-  try{
-    document.getElementById('loading-text').textContent='AI is analyzing — about 15 seconds...';
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages:[{role:'user',content:userPrompt}]})
+  try {
+    document.getElementById('loading-text').textContent = 'AI is analyzing — about 15 seconds...';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'x-api-key':apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, system:systemPrompt, messages:[{role:'user',content:userPrompt}] })
     });
 
-    if(!res.ok){
-      let errMsg=`Server error ${res.status}`;
-      try{ const d=await res.json(); errMsg=d.error?.message||errMsg; }catch(e){}
-      if(res.status===401) errMsg='Invalid API key. Click "🔑 API Key Active" in the header to update your key.';
-      if(res.status===429) errMsg='Rate limit reached. Please wait a moment and try again.';
+    if (!res.ok) {
+      let errMsg = `Server error ${res.status}`;
+      try { const d=await res.json(); errMsg=d.error?.message||errMsg; } catch(e) {}
+      if (res.status===401) errMsg='Invalid API key. Click "🔑 API Key" in the header to update.';
+      if (res.status===429) errMsg='Rate limit reached. Please wait a moment and try again.';
       throw new Error(errMsg);
     }
 
-    const data=await res.json();
-    const rawText=(data.content||[]).map(b=>b.text||'').join('').trim();
-    if(!rawText) throw new Error('The AI returned an empty response. Please try again.');
+    const data = await res.json();
+    const rawText = (data.content||[]).map(b=>b.text||'').join('').trim();
+    if (!rawText) throw new Error('The AI returned an empty response. Please try again.');
 
-    let clean=rawText.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
-    const start=clean.indexOf('{'),end=clean.lastIndexOf('}');
-    if(start!==-1&&end!==-1) clean=clean.slice(start,end+1);
+    let clean = rawText.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+    const start=clean.indexOf('{'), end=clean.lastIndexOf('}');
+    if (start!==-1&&end!==-1) clean=clean.slice(start,end+1);
 
     let analysis;
-    try{ analysis=JSON.parse(clean); }
-    catch(pe){ console.error('Raw:',rawText); throw new Error('Could not read the AI response. Please try again.'); }
+    try { analysis = JSON.parse(clean); }
+    catch(pe) { throw new Error('Could not read AI response. Please try again.'); }
 
-    if(typeof analysis.total!=='number'||!analysis.scores) throw new Error('Unexpected AI response. Please try again.');
-    analysis.total=(analysis.scores.qualifications||0)+(analysis.scores.entrepreneurial||0)+(analysis.scores.academic||0)+(analysis.scores.mission||0);
+    if (typeof analysis.total!=='number'||!analysis.scores) throw new Error('Unexpected AI response. Please try again.');
+    analysis.total = (analysis.scores.qualifications||0)+(analysis.scores.entrepreneurial||0)+(analysis.scores.academic||0)+(analysis.scores.mission||0);
 
-    const candidate={id:Date.now().toString(),name,role,diversityNote,resumeText:resume,status:'new',notes:'',analysis,addedAt:new Date().toISOString()};
-    candidates[role].push(candidate);
-    sortCandidates(role);
-    saveData();
-    isAnalyzing=false;
-    if(currentTab!==role) switchTab(role); else renderList();
-    selectCandidate(candidate.id);
+    document.getElementById('loading-text').textContent = 'Saving to shared database...';
+
+    const id = Date.now().toString();
+    await sbInsert({ id, name, role, status:'new', notes:'', diversity_note:diversityNote, analysis, added_at:new Date().toISOString() });
+
+    isAnalyzing = false;
     closeModal();
+    await loadCandidates();
+    if (currentTab !== role) switchTab(role);
+    selectCandidate(id);
+    showToast('✓ ' + name + ' added and saved to team database');
 
-  }catch(err){
-    console.error(err); isAnalyzing=false;
+  } catch(err) {
+    console.error(err); isAnalyzing = false;
     document.getElementById('loading-box').classList.remove('active');
     resetBtn();
-    let msg=err.message||'An unexpected error occurred.';
-    if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('network')) msg='Network error: Could not reach the AI. Please check your internet connection and try again.';
-    showError('⚠️ '+msg);
+    let msg = err.message || 'An unexpected error occurred.';
+    if (msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('network')) msg='Network error: Could not reach the AI. Please check your internet connection.';
+    showError('⚠️ ' + msg);
   }
 }
 
-function sortCandidates(role){ candidates[role].sort((a,b)=>b.analysis.total-a.analysis.total); }
+// ── CSV EXPORT ────────────────────────────────────────────────
+function exportCSV() {
+  const all = [...candidates.bd, ...candidates.acct];
+  if (all.length===0) { alert('No candidates to export yet.'); return; }
+  const headers = ['Rank','Name','Role','Total Score','Grade','Fit Level','Qualifications /25','Entrepreneurial /25','Academic /25','Mission & Equity /25','Status','Headline','Strengths','Gaps','Entrepreneurial Evidence','Academic Highlight','Mission Note','AI Recommendation','Diversity Note','Date Added','Recruiter Notes'];
+  const roleRanks = {bd:{},acct:{}};
+  candidates.bd.forEach((c,i)=>roleRanks.bd[c.id]=i+1);
+  candidates.acct.forEach((c,i)=>roleRanks.acct[c.id]=i+1);
+  const rows = all.map(c => {
+    const a=c.analysis, s=a.scores;
+    return [
+      roleRanks[c.role][c.id]||'', c.name,
+      c.role==='bd'?'Sr. Business Development Executive':'Sr. Accountant / Accounting Manager',
+      a.total, a.grade, a.fitLevel, s.qualifications, s.entrepreneurial, s.academic, s.mission,
+      c.status, a.headline, (a.strengths||[]).join(' | '), (a.gaps||[]).join(' | '),
+      a.entrepreneurialEvidence||'', a.academicHighlight||'', a.missionNote||'',
+      a.hiringRecommendation||'', c.diversityNote||'',
+      new Date(c.addedAt).toLocaleDateString(), c.notes||''
+    ].map(v=>'"'+String(v).replace(/"/g,'""')+'"');
+  });
+  const csv = [headers.map(h=>'"'+h+'"').join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='BOM_Candidates_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
 
-function renderList(){
-  const list=document.getElementById('candidate-list');
-  const all=candidates[currentTab];
-  document.getElementById('count-bd').textContent=candidates.bd.length;
-  document.getElementById('count-acct').textContent=candidates.acct.length;
-  document.getElementById('stat-total').textContent=all.length;
-  if(all.length>0){
+// ── SORT & RENDER ─────────────────────────────────────────────
+function sortCandidates(role) { candidates[role].sort((a,b)=>b.analysis.total-a.analysis.total); }
+
+function renderList() {
+  const list = document.getElementById('candidate-list');
+  const all = candidates[currentTab];
+  document.getElementById('count-bd').textContent = candidates.bd.length;
+  document.getElementById('count-acct').textContent = candidates.acct.length;
+  document.getElementById('stat-total').textContent = all.length;
+  if (all.length>0) {
     const avg=Math.round(all.reduce((s,c)=>s+c.analysis.total,0)/all.length);
     const el=document.getElementById('stat-avg'); el.textContent=avg; el.className='stat-num '+sc(avg);
     document.getElementById('stat-top').textContent=all[0].name.split(' ')[0];
-  }else{ document.getElementById('stat-avg').textContent='—'; document.getElementById('stat-avg').className='stat-num'; document.getElementById('stat-top').textContent='—'; }
+  } else { document.getElementById('stat-avg').textContent='—'; document.getElementById('stat-avg').className='stat-num'; document.getElementById('stat-top').textContent='—'; }
   document.getElementById('stat-finalist').textContent=all.filter(c=>c.status==='finalist').length;
   document.getElementById('stat-interview').textContent=all.filter(c=>c.status==='interview').length;
   const filtered=currentFilter==='all'?all:all.filter(c=>c.status===currentFilter);
-  if(filtered.length===0){ list.innerHTML=`<div class="list-empty"><div class="list-empty-icon">📂</div><div class="list-empty-text">${all.length===0?'No candidates yet.<br>Click <strong>+ Add Candidate</strong> to get started.':'No candidates with status "'+currentFilter+'".'}</div></div>`; return; }
+  if (filtered.length===0) { list.innerHTML=`<div class="list-empty"><div class="list-empty-icon">📂</div><div class="list-empty-text">${all.length===0?'No candidates yet.<br>Click <strong>+ Add Candidate</strong> to get started.':'No candidates with status "'+currentFilter+'".'}</div></div>`; return; }
   const rk=['#5a1a6e','#8a6500','#1a5a3a'];
   list.innerHTML=filtered.map((c,i)=>{
-    const s=c.analysis.scores,tot=c.analysis.total;
+    const s=c.analysis.scores, tot=c.analysis.total;
     return `<div class="candidate-card${selectedId===c.id?' selected':''}" onclick="selectCandidate('${c.id}')">
       <div class="rank-stripe" style="background:${rk[i]||'#c8c0b4'}"></div>
       <div class="card-body">
@@ -648,15 +696,16 @@ function renderList(){
   }).join('');
 }
 
-function selectCandidate(id){
+// ── SELECT CANDIDATE ──────────────────────────────────────────
+function selectCandidate(id) {
   selectedId=id;
   const c=[...candidates.bd,...candidates.acct].find(x=>x.id===id);
-  if(!c) return;
+  if (!c) return;
   renderList();
   document.getElementById('empty-detail').style.display='none';
   const panel=document.getElementById('detail-panel');
   panel.classList.add('visible'); panel.style.display='flex';
-  const a=c.analysis,s=a.scores;
+  const a=c.analysis, s=a.scores;
   panel.innerHTML=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
       <div>
@@ -701,25 +750,37 @@ function selectCandidate(id){
 
 function sr(label,val,cls){ return `<div class="score-row"><div class="score-row-label">${label}</div><div class="score-row-bar"><div class="score-row-fill ${cls}" style="width:${(val/25)*100}%"></div></div><div class="score-row-num">${val}<span style="color:var(--text-dim);font-size:0.58rem">/25</span></div></div>`; }
 
-function updateStatus(id,status,btn){
+async function updateStatus(id, status, btn) {
   const c=[...candidates.bd,...candidates.acct].find(x=>x.id===id);
-  if(!c) return;
+  if (!c) return;
   c.status=status;
   btn.closest('.status-selector').querySelectorAll('.status-btn').forEach(b=>b.classList.remove('s-active'));
   btn.classList.add('s-active');
-  saveData(); renderList();
+  renderList();
+  try { await sbUpdate(id,{status}); showToast('✓ Status updated'); }
+  catch(e) { showToast('⚠ Could not save status change','error'); }
 }
 
-function updateNotes(id,val){
+let notesTimer = null;
+function updateNotes(id, val) {
   const c=[...candidates.bd,...candidates.acct].find(x=>x.id===id);
-  if(c){ c.notes=val; saveData(); }
+  if (c) c.notes=val;
+  clearTimeout(notesTimer);
+  notesTimer = setTimeout(async ()=>{
+    try { await sbUpdate(id,{notes:val}); showToast('✓ Notes saved'); }
+    catch(e) { showToast('⚠ Could not save notes','error'); }
+  }, 1200);
 }
 
-function removeCandidate(id){
-  if(!confirm('Remove this candidate?')) return;
-  candidates.bd=candidates.bd.filter(c=>c.id!==id);
-  candidates.acct=candidates.acct.filter(c=>c.id!==id);
-  selectedId=null; saveData(); showEmptyDetail(); renderList();
+async function removeCandidate(id) {
+  if (!confirm('Remove this candidate from the shared tracker? This cannot be undone.')) return;
+  try {
+    await sbDelete(id);
+    candidates.bd=candidates.bd.filter(c=>c.id!==id);
+    candidates.acct=candidates.acct.filter(c=>c.id!==id);
+    selectedId=null; showEmptyDetail(); renderList();
+    showToast('Candidate removed');
+  } catch(e) { showToast('⚠ Could not remove candidate','error'); }
 }
 
 function showEmptyDetail(){ document.getElementById('empty-detail').style.display=''; const p=document.getElementById('detail-panel'); p.classList.remove('visible'); p.style.display='none'; }

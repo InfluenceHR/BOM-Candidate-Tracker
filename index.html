@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOM Candidate Intelligence Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ef; --white: #ffffff; --surface2: #f9f8f6;
+    --border: #e2ddd6; --border-dark: #c8c0b4;
+    --purple: #5a1a6e; --purple-light: #7a2a90; --purple-pale: #f0e8f4;
+    --gold: #b8892a; --gold-light: #d4a843;
+    --text: #1a1612; --text-mid: #4a4540; --text-muted: #7a7068; --text-dim: #a09890;
+    --blue: #1a6fa8; --green-dark: #1a6b3a; --green: #2d9e5a; --green-pale: #e8f5ee;
+    --red: #b83232; --red-pale: #fdf0f0; --yellow: #9a6e10; --yellow-pale: #fef9e7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+  /* ── API KEY GATE ── */
+  #api-gate { position: fixed; inset: 0; background: var(--purple); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1rem; }
+  #api-gate.hidden { display: none; }
+  .gate-card { background: var(--white); border-radius: 16px; padding: 2.25rem 2rem; max-width: 480px; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.3); }
+  .gate-logo { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
+  .gate-mark { width: 40px; height: 40px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold-light); font-weight: 700; }
+  .gate-logo-text { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--text); line-height: 1.2; }
+  .gate-logo-sub { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; }
+  .gate-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--text); margin-bottom: 0.4rem; }
+  .gate-sub { font-size: 0.77rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem; }
+  .gate-steps { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; }
+  .gate-steps-title { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.5rem; }
+  .gate-step { font-size: 0.75rem; color: var(--text-mid); line-height: 1.7; display: flex; gap: 0.5rem; }
+  .gate-step-num { color: var(--purple); font-weight: 700; flex-shrink: 0; }
+  .gate-input-row { display: flex; gap: 0.6rem; margin-bottom: 0.5rem; }
+  .gate-input { flex: 1; background: var(--white); border: 1.5px solid var(--border-dark); border-radius: 6px; padding: 0.62rem 0.85rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; transition: border-color 0.18s; }
+  .gate-input:focus { outline: none; border-color: var(--purple); }
+  .gate-input::placeholder { color: var(--text-dim); font-family: 'Inter', sans-serif; }
+  .gate-btn { padding: 0.62rem 1.3rem; background: var(--purple); color: #fff; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.18s; box-shadow: 0 2px 8px rgba(90,26,110,0.25); }
+  .gate-btn:hover { background: var(--purple-light); }
+  .gate-error { font-size: 0.72rem; color: var(--red); margin-top: 0.35rem; display: none; }
+  .gate-error.show { display: block; }
+  .gate-note { font-size: 0.67rem; color: var(--text-dim); margin-top: 0.75rem; line-height: 1.55; }
+  .gate-note a { color: var(--purple); text-decoration: none; }
+  .gate-note a:hover { text-decoration: underline; }
+
+  #app { display: none; }
+  #app.visible { display: block; }
+
+  /* ── HEADER ── */
+  header { background: var(--purple); padding: 0 1.75rem; display: flex; align-items: center; justify-content: space-between; height: 58px; }
+  .brand { display: flex; align-items: center; gap: 0.85rem; }
+  .brand-mark { width: 32px; height: 32px; background: var(--gold-light); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 15px; color: var(--purple); font-weight: 700; flex-shrink: 0; }
+  .brand-name { font-family: 'Playfair Display', serif; font-size: 0.98rem; color: #fff; }
+  .brand-sub { font-size: 0.62rem; color: rgba(255,255,255,0.55); letter-spacing: 0.09em; text-transform: uppercase; display: block; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 0.75rem; }
+  .header-date { font-size: 0.68rem; color: rgba(255,255,255,0.5); font-family: 'JetBrains Mono', monospace; }
+  .header-pill { font-size: 0.65rem; color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 3px 9px; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: background 0.15s; white-space: nowrap; }
+  .header-pill:hover { background: rgba(255,255,255,0.18); }
+  .export-pill { background: rgba(212,168,67,0.2); border-color: rgba(212,168,67,0.4); color: var(--gold-light); }
+  .export-pill:hover { background: rgba(212,168,67,0.3); }
+
+  /* ── SAVE INDICATOR ── */
+  .save-toast { position: fixed; bottom: 1.25rem; right: 1.25rem; background: var(--green-dark); color: #fff; font-size: 0.72rem; padding: 0.5rem 1rem; border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 500; opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.3s; z-index: 200; pointer-events: none; }
+  .save-toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── TABS ── */
+  .tabs-bar { background: var(--white); border-bottom: 2px solid var(--border); padding: 0 1.75rem; display: flex; align-items: flex-end; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+  .tab-btn { padding: 0.8rem 1.2rem; background: none; border: none; border-bottom: 3px solid transparent; color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.79rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; transition: all 0.18s; margin-bottom: -2px; white-space: nowrap; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active-bd { color: var(--purple); border-bottom-color: var(--purple); font-weight: 600; }
+  .tab-btn.active-acct { color: var(--green-dark); border-bottom-color: var(--green-dark); font-weight: 600; }
+  .tab-count { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; padding: 1px 7px; border-radius: 20px; font-weight: 600; }
+  .count-bd { background: var(--purple-pale); color: var(--purple); }
+  .count-acct { background: var(--green-pale); color: var(--green-dark); }
+
+  /* ── SUMMARY BAR ── */
+  .summary-bar { background: var(--white); border-bottom: 1px solid var(--border); padding: 0.7rem 1.75rem; display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+  .stat { display: flex; flex-direction: column; gap: 1px; }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 1.2rem; line-height: 1; color: var(--text); }
+  .stat-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .stat-divider { width: 1px; height: 28px; background: var(--border); }
+
+  /* ── MAIN ── */
+  .main { display: grid; grid-template-columns: 1fr 360px; min-height: calc(100vh - 128px); }
+  .list-panel { padding: 1.4rem 1.75rem; overflow-y: auto; border-right: 1px solid var(--border); }
+  .list-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; }
+  .list-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--text); line-height: 1.2; }
+  .list-title small { display: block; font-family: 'Inter', sans-serif; font-size: 0.7rem; color: var(--text-muted); font-weight: 400; margin-top: 3px; }
+  .add-btn { padding: 0.52rem 1.05rem; background: var(--purple); color: #fff; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: background 0.18s, transform 0.12s; white-space: nowrap; flex-shrink: 0; box-shadow: 0 2px 6px rgba(90,26,110,0.22); }
+  .add-btn:hover { background: var(--purple-light); transform: translateY(-1px); }
+  .legend { display: flex; gap: 1rem; margin-bottom: 0.8rem; flex-wrap: wrap; padding: 0.55rem 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 0.32rem; font-size: 0.67rem; color: var(--text-muted); }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .filter-bar { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-label { font-size: 0.66rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .filter-btn { padding: 0.26rem 0.72rem; border: 1px solid var(--border-dark); background: var(--white); border-radius: 20px; font-size: 0.69rem; color: var(--text-muted); cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500; transition: all 0.14s; }
+  .filter-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .filter-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; font-weight: 600; }
+
+  /* ── CARDS ── */
+  .candidate-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 10px; padding: 0.95rem 1.05rem; margin-bottom: 0.65rem; cursor: pointer; transition: border-color 0.18s, box-shadow 0.18s, transform 0.14s; position: relative; overflow: hidden; }
+  .candidate-card:hover { border-color: var(--purple); box-shadow: 0 4px 14px rgba(0,0,0,0.09); transform: translateY(-1px); }
+  .candidate-card.selected { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(90,26,110,0.1), 0 4px 14px rgba(0,0,0,0.09); }
+  .rank-stripe { position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 10px 0 0 10px; }
+  .card-body { padding-left: 8px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.7rem; margin-bottom: 0.6rem; }
+  .card-left { flex: 1; min-width: 0; }
+  .card-name-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 3px; }
+  .card-rank-num { font-family: 'JetBrains Mono', monospace; font-size: 0.63rem; color: var(--text-dim); background: var(--bg); padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+  .card-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+  .status-badge { font-size: 0.58rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-family: 'JetBrains Mono', monospace; }
+  .status-new { background: #e8f0fe; color: #1a56b0; }
+  .status-screening { background: var(--yellow-pale); color: var(--yellow); }
+  .status-interview { background: var(--purple-pale); color: var(--purple); }
+  .status-finalist { background: var(--green-pale); color: var(--green-dark); }
+  .status-declined { background: var(--red-pale); color: var(--red); }
+  .card-headline { font-size: 0.71rem; color: var(--text-muted); font-style: italic; }
+  .card-right { text-align: right; flex-shrink: 0; }
+  .card-score-big { font-family: 'Playfair Display', serif; font-size: 1.85rem; line-height: 1; }
+  .card-score-denom { font-family: 'Inter', sans-serif; font-size: 0.6rem; color: var(--text-dim); }
+  .card-grade { font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; margin-top: 2px; text-align: right; }
+  .score-strips { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 3px; height: 5px; margin-bottom: 0.55rem; }
+  .strip { background: var(--bg); border-radius: 3px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+  .strip-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.45rem; flex-wrap: wrap; }
+  .diversity-note { font-size: 0.66rem; color: var(--gold); font-weight: 500; }
+  .card-tags { display: flex; gap: 0.28rem; flex-wrap: wrap; }
+  .card-tag { font-size: 0.59rem; padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; color: var(--text-muted); background: var(--surface2); }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel { background: var(--white); overflow-y: auto; border-left: 1px solid var(--border); }
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 2rem; text-align: center; gap: 0.7rem; }
+  .empty-icon { font-size: 2.5rem; opacity: 0.22; }
+  .empty-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--text-muted); }
+  .empty-sub { font-size: 0.74rem; color: var(--text-dim); max-width: 210px; line-height: 1.6; }
+  .detail-panel { padding: 1.4rem; display: none; flex-direction: column; gap: 1.05rem; }
+  .detail-panel.visible { display: flex; }
+  .detail-name { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--text); }
+  .detail-role { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
+  .detail-diversity { font-size: 0.7rem; color: var(--gold); font-weight: 500; margin-top: 4px; }
+  .detail-score-num { font-family: 'Playfair Display', serif; font-size: 2.5rem; line-height: 1; }
+  .detail-score-label { font-size: 0.6rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; text-align: right; margin-top: 2px; }
+  .section-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.55rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--border); }
+  .score-row { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
+  .score-row-label { font-size: 0.72rem; color: var(--text-mid); width: 145px; flex-shrink: 0; line-height: 1.3; font-weight: 500; }
+  .score-row-bar { flex: 1; height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+  .score-row-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .score-row-num { font-family: 'JetBrains Mono', monospace; font-size: 0.71rem; color: var(--text); width: 40px; text-align: right; flex-shrink: 0; font-weight: 500; }
+  .status-selector { display: flex; gap: 0.38rem; flex-wrap: wrap; }
+  .status-btn { padding: 0.3rem 0.78rem; border: 1.5px solid var(--border-dark); background: var(--white); border-radius: 5px; font-size: 0.69rem; color: var(--text-muted); cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500; transition: all 0.14s; }
+  .status-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .status-btn.s-active { background: var(--purple); border-color: var(--purple); color: #fff; font-weight: 600; }
+  .analysis-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.82rem 0.95rem; }
+  .analysis-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; margin-bottom: 0.4rem; }
+  .analysis-text { font-size: 0.77rem; color: var(--text-mid); line-height: 1.65; }
+  .tags-row { display: flex; flex-wrap: wrap; gap: 0.38rem; margin-top: 0.4rem; }
+  .tag-chip { font-size: 0.65rem; padding: 3px 9px; border-radius: 4px; font-weight: 500; }
+  .tag-pos { background: var(--green-pale); color: var(--green-dark); border: 1px solid #c0e8cf; }
+  .tag-gap { background: var(--red-pale); color: var(--red); border: 1px solid #f0c8c8; }
+  .notes-area { width: 100%; background: var(--white); border: 1.5px solid var(--border-dark); border-radius: 6px; padding: 0.72rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.77rem; line-height: 1.55; resize: vertical; min-height: 90px; transition: border-color 0.18s; }
+  .notes-area:focus { outline: none; border-color: var(--purple); }
+  .notes-area::placeholder { color: var(--text-dim); }
+
+  /* ── MODAL ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(20,10,30,0.52); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--white); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 570px; max-height: 92vh; overflow-y: auto; padding: 1.85rem; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.18); animation: slideUp 0.2s ease; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.35rem; margin-bottom: 0.22rem; color: var(--text); }
+  .modal-sub { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1.4rem; line-height: 1.55; }
+  .modal-close { position: absolute; top: 1.2rem; right: 1.2rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; width: 28px; height: 28px; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; transition: all 0.14s; }
+  .modal-close:hover { background: var(--border); color: var(--text); }
+  .form-group { margin-bottom: 1.05rem; }
+  .form-label { display: block; font-size: 0.69rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; margin-bottom: 0.32rem; }
+  .form-input, .form-select { width: 100%; background: var(--white); border: 1.5px solid var(--border-dark); border-radius: 6px; padding: 0.58rem 0.82rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.84rem; transition: border-color 0.18s; }
+  .form-input:focus, .form-select:focus { outline: none; border-color: var(--purple); }
+  .form-input::placeholder { color: var(--text-dim); }
+  .form-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7068'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.82rem center; background-color: var(--white); }
+  .form-textarea { width: 100%; background: var(--white); border: 1.5px solid var(--border-dark); border-radius: 6px; padding: 0.72rem 0.82rem; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.79rem; line-height: 1.65; resize: vertical; min-height: 210px; transition: border-color 0.18s; }
+  .form-textarea:focus { outline: none; border-color: var(--purple); }
+  .form-textarea::placeholder { color: var(--text-dim); }
+  .form-hint { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.28rem; line-height: 1.5; }
+  .error-box { display: none; background: var(--red-pale); border: 1px solid #f0c8c8; border-radius: 6px; padding: 0.72rem 0.95rem; margin-top: 0.7rem; font-size: 0.77rem; color: var(--red); line-height: 1.55; }
+  .error-box.visible { display: block; }
+  .loading-box { display: none; align-items: center; gap: 0.72rem; padding: 0.82rem 0.95rem; background: var(--purple-pale); border: 1px solid #d8c4e8; border-radius: 6px; margin-top: 0.7rem; }
+  .loading-box.active { display: flex; }
+  .spinner { width: 17px; height: 17px; border: 2.5px solid #d8c4e8; border-top-color: var(--purple); border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 0.77rem; color: var(--purple); font-weight: 500; }
+  .modal-actions { display: flex; gap: 0.72rem; justify-content: flex-end; margin-top: 1.4rem; }
+  .btn-cancel { padding: 0.58rem 1.15rem; background: var(--white); border: 1.5px solid var(--border-dark); border-radius: 6px; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; font-family: 'Inter', sans-serif; font-weight: 500; transition: all 0.14s; }
+  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-analyze { padding: 0.58rem 1.45rem; background: var(--purple); border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 600; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 0.45rem; transition: all 0.14s; box-shadow: 0 2px 8px rgba(90,26,110,0.22); }
+  .btn-analyze:hover { background: var(--purple-light); }
+  .btn-analyze:disabled { opacity: 0.52; cursor: not-allowed; }
+  .list-empty { text-align: center; padding: 2.5rem 1rem; }
+  .list-empty-icon { font-size: 2.2rem; margin-bottom: 0.45rem; opacity: 0.3; }
+  .list-empty-text { font-size: 0.8rem; line-height: 1.6; color: var(--text-muted); }
+  .sc-excellent { color: var(--green-dark); } .sc-good { color: #8a6500; } .sc-fair { color: #b85a00; } .sc-low { color: var(--red); }
+  .fill-q { background: var(--purple); } .fill-e { background: var(--gold-light); } .fill-a { background: var(--blue); } .fill-m { background: var(--green); }
+  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- SAVE TOAST -->
+<div class="save-toast" id="save-toast">✓ Progress saved</div>
+
+<!-- API GATE -->
+<div id="api-gate">
+  <div class="gate-card">
+    <div class="gate-logo">
+      <div class="gate-mark">B</div>
+      <div>
+        <div class="gate-logo-text">Black Onyx Management</div>
+        <span class="gate-logo-sub">Candidate Intelligence Tracker · Managed by Influence HR</span>
+      </div>
+    </div>
+    <div class="gate-title">Enter Your API Key to Continue</div>
+    <div class="gate-sub">This tool uses Claude AI to score and rank candidates. You need a free Anthropic API key. Your key is stored only in your browser and never shared.</div>
+    <div class="gate-steps">
+      <div class="gate-steps-title">How to get your free API key</div>
+      <div class="gate-step"><span class="gate-step-num">1.</span> Go to <strong>platform.anthropic.com</strong> and create a free account</div>
+      <div class="gate-step"><span class="gate-step-num">2.</span> Click <strong>API Keys</strong> in the left menu → <strong>Create Key</strong></div>
+      <div class="gate-step"><span class="gate-step-num">3.</span> Copy the key (starts with <code style="font-family:'JetBrains Mono',monospace;font-size:0.72rem">sk-ant-</code>) and paste below</div>
+      <div class="gate-step"><span class="gate-step-num">4.</span> Add a small amount of credit — $5 covers ~300 resume analyses</div>
+    </div>
+    <div class="gate-input-row">
+      <input type="password" class="gate-input" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="gate-btn" onclick="submitApiKey()">Enter →</button>
+    </div>
+    <div class="gate-error" id="gate-error">Please enter a valid API key starting with sk-ant-</div>
+    <div class="gate-note">
+      🔒 Your key saves in your browser — you won't need to re-enter it next time.<br>
+      Each resume analysis costs roughly <strong>$0.01–$0.02</strong>.<br>
+      Need help? Contact <a href="mailto:mwalker@theinfluencehr.com">mwalker@theinfluencehr.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">B</div>
+      <div>
+        <div class="brand-name">Black Onyx Management</div>
+        <div class="brand-sub">Candidate Intelligence Tracker · Managed by Influence HR</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-date" id="header-date"></div>
+      <div class="header-pill export-pill" onclick="exportCSV()">⬇ Export CSV</div>
+      <div class="header-pill" onclick="changeApiKey()" title="Click to change API key">🔑 API Key Active</div>
+    </div>
+  </header>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active-bd" onclick="switchTab('bd')" id="tab-bd">
+      📊 Sr. Business Development Executive
+      <span class="tab-count count-bd" id="count-bd">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('acct')" id="tab-acct">
+      🧾 Sr. Accountant / Accounting Manager
+      <span class="tab-count count-acct" id="count-acct">0</span>
+    </button>
+  </div>
+
+  <div class="summary-bar">
+    <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Candidates</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-num" id="stat-avg">—</div><div class="stat-label">Avg Score</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-num" id="stat-top">—</div><div class="stat-label">Top Candidate</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-num" id="stat-interview">0</div><div class="stat-label">Interviewing</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-num" id="stat-finalist">0</div><div class="stat-label">Finalists</div></div>
+  </div>
+
+  <div class="main">
+    <div class="list-panel">
+      <div class="list-header">
+        <div class="list-title" id="list-title">
+          Senior Business Development Executive
+          <small>Ranked by AI analysis · Washington D.C. (Hybrid) · $90K base + commission</small>
+        </div>
+        <button class="add-btn" onclick="openModal()">+ Add Candidate</button>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Qualifications</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--gold-light)"></div>Entrepreneurial</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Academic</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Mission/Equity</div>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Filter:</span>
+        <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+        <button class="filter-btn" onclick="setFilter('new',this)">New</button>
+        <button class="filter-btn" onclick="setFilter('screening',this)">Screening</button>
+        <button class="filter-btn" onclick="setFilter('interview',this)">Interview</button>
+        <button class="filter-btn" onclick="setFilter('finalist',this)">Finalist</button>
+        <button class="filter-btn" onclick="setFilter('declined',this)">Declined</button>
+      </div>
+      <div id="candidate-list">
+        <div class="list-empty">
+          <div class="list-empty-icon">📂</div>
+          <div class="list-empty-text">No candidates yet.<br>Click <strong>+ Add Candidate</strong> to get started.</div>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="empty-state" id="empty-detail">
+        <div class="empty-icon">👤</div>
+        <div class="empty-title">Select a candidate</div>
+        <div class="empty-sub">Click any card to view their full AI analysis and score breakdown.</div>
+      </div>
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CANDIDATE MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">Add Candidate</div>
+    <div class="modal-sub">Enter the candidate's name, select the role, then paste their resume. Claude AI will score them across all four BOM criteria in about 15 seconds.</div>
+    <div class="form-group">
+      <label class="form-label">Candidate Full Name *</label>
+      <input type="text" class="form-input" id="input-name" placeholder="e.g. Jordan Williams">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Role *</label>
+      <select class="form-select" id="input-role">
+        <option value="bd">Senior Business Development Executive</option>
+        <option value="acct">Senior Accountant / Accounting Manager</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Resume Text *</label>
+      <textarea class="form-textarea" id="input-resume" placeholder="Paste the full resume text here...&#10;&#10;How to copy from a PDF:&#10;Open PDF → Click anywhere → Ctrl+A (Select All) → Ctrl+C (Copy) → Paste here&#10;&#10;If text comes out garbled, ask the candidate for a Word doc version."></textarea>
+      <div class="form-hint">Even a partial resume works. The more complete, the more accurate the analysis.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Diversity / Recruiter Note &nbsp;<span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <input type="text" class="form-input" id="input-diversity" placeholder="e.g. HBCU graduate, first-generation professional, multilingual...">
+      <div class="form-hint">Add context supporting BOM's diversity commitment that the resume may not capture.</div>
+    </div>
+    <div class="loading-box" id="loading-box">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">Analyzing resume — about 15 seconds...</div>
+    </div>
+    <div class="error-box" id="error-box"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancel-btn" onclick="closeModal()">Cancel</button>
+      <button class="btn-analyze" id="analyze-btn" onclick="analyzeCandidate()">⚡ Analyze &amp; Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const JD_BD=`ROLE: Senior Business Development Executive | Company: Black Onyx Management (BOM) | Location: Washington D.C. Hybrid | Salary: $90,000 base + 20% commission
+ABOUT BOM: Research-informed, mission-driven consulting firm. Expertise in research, organizational development, communications, nonprofit strategy, data analytics, philanthropy advisory. Partners with government agencies, foundations, and CBOs. Led by a team of academics. Committed to equity, community, systemic change.
+RESPONSIBILITIES: Lead national BD targeting federal agencies, foundations, policy orgs, research institutions. Identify, cultivate, close new client relationships via outreach, networking, proposals, pipeline management. Manage HubSpot pipeline; use Apollo for prospecting. Develop proposals, capability statements, presentations. Represent BOM at national conferences. Report directly to CEO. Drive applied research, evaluation, data analytics sales.
+REQUIRED: 5+ years BD/sales/strategic partnerships (consulting, research, or mission-driven preferred). Demonstrated success securing/growing client relationships in federal, nonprofit, or philanthropic context. Strong understanding of D.C. landscape and government-adjacent decision-making. Proven track record meeting/exceeding revenue targets. Excellent written/verbal communication. HubSpot and Apollo proficiency. Self-directed, entrepreneurial, comfortable without heavy infrastructure. Commitment to BOM equity and community values.
+CULTURE (HEAVILY WEIGHTED): BOM is a team of academics — advanced degrees, research backgrounds, intellectual rigor are critical. Entrepreneurial spirit and go-getter attitude are essential. Equity-centered mindset. Comfortable with ambiguity. Diversity of background is strongly valued.`;
+
+const JD_ACCT=`ROLE: Senior Accountant / Accounting Manager | Company: Black Onyx Management (BOM) | Location: Indianapolis IN In-Office Required | Salary: $75,000–$90,000
+ABOUT BOM: Research-informed, community-focused consulting firm founded 2019. Benefit corporation merging business success with community impact. Led by a team of academics.
+RESPONSIBILITIES: Core Accounting 40%: Own GL, reconciliations, month-end close; lead automation and process improvements; manage AP/AR. Financial Planning & Cost Control 30%: Cost control monitoring; revenue/expense projections; financial modeling; scenario planning; proactive spending forecasting. Project Financial Management 20%: Proposal financial review; project invoicing; revenue recognition; profitability tracking. Client-Facing & BD 10%: Help design accounting/finance services for external clients; client presentations.
+REQUIRED: Bachelor's in Accounting or Finance. 5+ years progressive accounting experience. Strong ownership mindset and proactive approach. Financial forecasting, budgeting, variance analysis experience. Project-based accounting and revenue recognition. Analytical skills. Strong communication for non-financial stakeholders. Proficiency with accounting software and advanced Excel.
+PREFERRED: CPA or active progress toward CPA. Professional services or consulting experience. Process improvement and automation track record. Financial modeling. Client-facing or BD exposure. Experience building/scaling finance functions.
+CULTURE (HEAVILY WEIGHTED): BOM is a team of academics — advanced degrees and intellectual curiosity are critical. Entrepreneurial spirit essential. Equity-centered mindset. Proactive and self-directed. Diversity of background is strongly valued.`;
+
+let candidates={bd:[],acct:[]};
+let currentTab='bd',currentFilter='all',selectedId=null,isAnalyzing=false,apiKey='';
+
+// ── STORAGE ───────────────────────────────────────────────────
+function saveData(){
+  try{
+    // Don't save resumeText to keep storage lean
+    const toSave={
+      bd: candidates.bd.map(c=>({...c,resumeText:''})),
+      acct: candidates.acct.map(c=>({...c,resumeText:''}))
+    };
+    localStorage.setItem('bom_candidates',JSON.stringify(toSave));
+    showToast();
+  }catch(e){ console.warn('Save failed:',e); }
+}
+
+function loadData(){
+  try{
+    const saved=localStorage.getItem('bom_candidates');
+    if(saved){ candidates=JSON.parse(saved); }
+  }catch(e){ console.warn('Load failed:',e); }
+}
+
+function showToast(){
+  const t=document.getElementById('save-toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ── API KEY ───────────────────────────────────────────────────
+function initApiKey(){
+  const saved=localStorage.getItem('bom_api_key');
+  if(saved&&saved.startsWith('sk-ant-')){ apiKey=saved; loadData(); showApp(); }
+}
+
+function submitApiKey(){
+  const val=document.getElementById('api-key-input').value.trim();
+  if(!val||!val.startsWith('sk-ant-')){ document.getElementById('gate-error').classList.add('show'); return; }
+  apiKey=val;
+  localStorage.setItem('bom_api_key',val);
+  loadData(); showApp();
+}
+
+document.getElementById('api-key-input').addEventListener('keydown',e=>{ if(e.key==='Enter') submitApiKey(); });
+
+function showApp(){
+  document.getElementById('api-gate').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  renderList();
+}
+
+function changeApiKey(){
+  if(!confirm('Change your API key? You will be returned to the login screen.')) return;
+  localStorage.removeItem('bom_api_key'); apiKey='';
+  document.getElementById('api-key-input').value='';
+  document.getElementById('api-gate').classList.remove('hidden');
+  document.getElementById('app').classList.remove('visible');
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────
+function exportCSV(){
+  const all=[...candidates.bd,...candidates.acct];
+  if(all.length===0){ alert('No candidates to export yet.'); return; }
+
+  const headers=['Rank','Name','Role','Total Score','Grade','Fit Level','Qualifications /25','Entrepreneurial /25','Academic /25','Mission & Equity /25','Status','Headline','Strengths','Gaps','Entrepreneurial Evidence','Academic Highlight','Mission Note','AI Recommendation','Diversity Note','Date Added','Recruiter Notes'];
+
+  const roleRanks={bd:{},acct:{}};
+  candidates.bd.forEach((c,i)=>roleRanks.bd[c.id]=i+1);
+  candidates.acct.forEach((c,i)=>roleRanks.acct[c.id]=i+1);
+
+  const rows=all.map(c=>{
+    const a=c.analysis,s=a.scores;
+    const rank=roleRanks[c.role][c.id]||'';
+    const roleName=c.role==='bd'?'Sr. Business Development Executive':'Sr. Accountant / Accounting Manager';
+    return [
+      rank, c.name, roleName, a.total, a.grade, a.fitLevel,
+      s.qualifications, s.entrepreneurial, s.academic, s.mission,
+      c.status, a.headline,
+      (a.strengths||[]).join(' | '),
+      (a.gaps||[]).join(' | '),
+      a.entrepreneurialEvidence||'',
+      a.academicHighlight||'',
+      a.missionNote||'',
+      a.hiringRecommendation||'',
+      c.diversityNote||'',
+      new Date(c.addedAt).toLocaleDateString(),
+      c.notes||''
+    ].map(v=>'"'+String(v).replace(/"/g,'""')+'"');
+  });
+
+  const csv=[headers.map(h=>'"'+h+'"').join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='BOM_Candidates_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(tab){
+  currentTab=tab; selectedId=null;
+  document.getElementById('tab-bd').className='tab-btn'+(tab==='bd'?' active-bd':'');
+  document.getElementById('tab-acct').className='tab-btn'+(tab==='acct'?' active-acct':'');
+  const t=document.getElementById('list-title');
+  if(tab==='bd') t.innerHTML='Senior Business Development Executive<small>Ranked by AI analysis · Washington D.C. (Hybrid) · $90K base + commission</small>';
+  else t.innerHTML='Senior Accountant / Accounting Manager<small>Ranked by AI analysis · Indianapolis, IN (In-Office) · $75K–$90K</small>';
+  document.getElementById('input-role').value=tab;
+  showEmptyDetail(); renderList();
+}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderList();
+}
+
+// ── MODAL ─────────────────────────────────────────────────────
+function openModal(){
+  clearError();
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('input-role').value=currentTab;
+  setTimeout(()=>document.getElementById('input-name').focus(),120);
+}
+
+function closeModal(){
+  if(isAnalyzing) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('input-name').value='';
+  document.getElementById('input-resume').value='';
+  document.getElementById('input-diversity').value='';
+  document.getElementById('loading-box').classList.remove('active');
+  resetBtn(); clearError();
+}
+
+document.getElementById('modal-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('modal-overlay')) closeModal();
+});
+
+function resetBtn(){ const b=document.getElementById('analyze-btn'); b.disabled=false; b.innerHTML='⚡ Analyze &amp; Add'; document.getElementById('cancel-btn').disabled=false; }
+function showError(msg){ const b=document.getElementById('error-box'); b.innerHTML=msg; b.classList.add('visible'); }
+function clearError(){ const b=document.getElementById('error-box'); b.innerHTML=''; b.classList.remove('visible'); }
+
+// ── ANALYZE ───────────────────────────────────────────────────
+async function analyzeCandidate(){
+  clearError();
+  const name=document.getElementById('input-name').value.trim();
+  const resume=document.getElementById('input-resume').value.trim();
+  const role=document.getElementById('input-role').value;
+  const diversityNote=document.getElementById('input-diversity').value.trim();
+
+  if(!name){ showError('Please enter the candidate\'s full name.'); return; }
+  if(!resume){ showError('Please paste the candidate\'s resume text.'); return; }
+  if(resume.split(/\s+/).length<20){ showError('The pasted text is too short. Please paste more of the resume.<br><br>Tip: Open PDF → Select All (Ctrl+A) → Copy → Paste here. If garbled, ask for a Word doc version.'); return; }
+
+  isAnalyzing=true;
+  document.getElementById('analyze-btn').disabled=true;
+  document.getElementById('analyze-btn').innerHTML='<span style="display:inline-block;width:13px;height:13px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.75s linear infinite;vertical-align:middle;margin-right:5px"></span>Analyzing...';
+  document.getElementById('cancel-btn').disabled=true;
+  document.getElementById('loading-box').classList.add('active');
+  document.getElementById('loading-text').textContent='Reading resume and scoring against BOM job description...';
+
+  const jd=role==='bd'?JD_BD:JD_ACCT;
+  const systemPrompt=`You are an expert HR analyst for Black Onyx Management (BOM), a mission-driven consulting firm led by a team of academics committed to equity and systemic change.
+Score the candidate on FOUR dimensions, 25 points each (total 100):
+1. QUALIFICATIONS MATCH (0-25): Years of relevant experience, required skills, education, role-specific expertise
+2. ENTREPRENEURIAL SPIRIT (0-25): Evidence of initiative, self-direction, building from scratch, go-getter behavior, comfort with ambiguity, ownership mindset, proactive problem-solving
+3. ACADEMIC CREDENTIALS (0-25): Advanced degrees, research experience, published work, academic affiliations, intellectual rigor, certifications — BOM is a team of academics, heavily weighted
+4. MISSION & EQUITY ALIGNMENT (0-25): Commitment to equity, nonprofit/mission-driven experience, DEI work, community focus, social impact, values alignment with BOM
+Respond ONLY with valid JSON. No markdown, no explanation, no preamble:
+{"scores":{"qualifications":0,"entrepreneurial":0,"academic":0,"mission":0},"total":0,"grade":"A","headline":"one punchy sentence max 12 words","fitLevel":"Strong Fit","strengths":["strength 1","strength 2","strength 3"],"gaps":["gap 1","gap 2"],"entrepreneurialEvidence":"specific evidence or None evident","academicHighlight":"best academic credential or Standard credentials","missionNote":"equity alignment or Limited evidence","hiringRecommendation":"2-3 sentence recommendation with interview talking points"}`;
+
+  const userPrompt=`JOB DESCRIPTION:\n${jd}\n\nCANDIDATE: ${name}${diversityNote?'\nDIVERSITY NOTE: '+diversityNote:''}\n\nRESUME:\n${resume}`;
+
+  try{
+    document.getElementById('loading-text').textContent='AI is analyzing — about 15 seconds...';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages:[{role:'user',content:userPrompt}]})
+    });
+
+    if(!res.ok){
+      let errMsg=`Server error ${res.status}`;
+      try{ const d=await res.json(); errMsg=d.error?.message||errMsg; }catch(e){}
+      if(res.status===401) errMsg='Invalid API key. Click "🔑 API Key Active" in the header to update your key.';
+      if(res.status===429) errMsg='Rate limit reached. Please wait a moment and try again.';
+      throw new Error(errMsg);
+    }
+
+    const data=await res.json();
+    const rawText=(data.content||[]).map(b=>b.text||'').join('').trim();
+    if(!rawText) throw new Error('The AI returned an empty response. Please try again.');
+
+    let clean=rawText.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+    const start=clean.indexOf('{'),end=clean.lastIndexOf('}');
+    if(start!==-1&&end!==-1) clean=clean.slice(start,end+1);
+
+    let analysis;
+    try{ analysis=JSON.parse(clean); }
+    catch(pe){ console.error('Raw:',rawText); throw new Error('Could not read the AI response. Please try again.'); }
+
+    if(typeof analysis.total!=='number'||!analysis.scores) throw new Error('Unexpected AI response. Please try again.');
+    analysis.total=(analysis.scores.qualifications||0)+(analysis.scores.entrepreneurial||0)+(analysis.scores.academic||0)+(analysis.scores.mission||0);
+
+    const candidate={id:Date.now().toString(),name,role,diversityNote,resumeText:resume,status:'new',notes:'',analysis,addedAt:new Date().toISOString()};
+    candidates[role].push(candidate);
+    sortCandidates(role);
+    saveData();
+    isAnalyzing=false;
+    if(currentTab!==role) switchTab(role); else renderList();
+    selectCandidate(candidate.id);
+    closeModal();
+
+  }catch(err){
+    console.error(err); isAnalyzing=false;
+    document.getElementById('loading-box').classList.remove('active');
+    resetBtn();
+    let msg=err.message||'An unexpected error occurred.';
+    if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('network')) msg='Network error: Could not reach the AI. Please check your internet connection and try again.';
+    showError('⚠️ '+msg);
+  }
+}
+
+function sortCandidates(role){ candidates[role].sort((a,b)=>b.analysis.total-a.analysis.total); }
+
+function renderList(){
+  const list=document.getElementById('candidate-list');
+  const all=candidates[currentTab];
+  document.getElementById('count-bd').textContent=candidates.bd.length;
+  document.getElementById('count-acct').textContent=candidates.acct.length;
+  document.getElementById('stat-total').textContent=all.length;
+  if(all.length>0){
+    const avg=Math.round(all.reduce((s,c)=>s+c.analysis.total,0)/all.length);
+    const el=document.getElementById('stat-avg'); el.textContent=avg; el.className='stat-num '+sc(avg);
+    document.getElementById('stat-top').textContent=all[0].name.split(' ')[0];
+  }else{ document.getElementById('stat-avg').textContent='—'; document.getElementById('stat-avg').className='stat-num'; document.getElementById('stat-top').textContent='—'; }
+  document.getElementById('stat-finalist').textContent=all.filter(c=>c.status==='finalist').length;
+  document.getElementById('stat-interview').textContent=all.filter(c=>c.status==='interview').length;
+  const filtered=currentFilter==='all'?all:all.filter(c=>c.status===currentFilter);
+  if(filtered.length===0){ list.innerHTML=`<div class="list-empty"><div class="list-empty-icon">📂</div><div class="list-empty-text">${all.length===0?'No candidates yet.<br>Click <strong>+ Add Candidate</strong> to get started.':'No candidates with status "'+currentFilter+'".'}</div></div>`; return; }
+  const rk=['#5a1a6e','#8a6500','#1a5a3a'];
+  list.innerHTML=filtered.map((c,i)=>{
+    const s=c.analysis.scores,tot=c.analysis.total;
+    return `<div class="candidate-card${selectedId===c.id?' selected':''}" onclick="selectCandidate('${c.id}')">
+      <div class="rank-stripe" style="background:${rk[i]||'#c8c0b4'}"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-left">
+            <div class="card-name-row"><span class="card-rank-num">#${i+1}</span><span class="card-name">${c.name}</span><span class="status-badge status-${c.status}">${c.status}</span></div>
+            <div class="card-headline">${c.analysis.headline||''}</div>
+          </div>
+          <div class="card-right">
+            <div class="card-score-big ${sc(tot)}">${tot}<span class="card-score-denom"> /100</span></div>
+            <div class="card-grade ${gc(c.analysis.grade)}">${c.analysis.grade} · ${c.analysis.fitLevel}</div>
+          </div>
+        </div>
+        <div class="score-strips">
+          <div class="strip"><div class="strip-fill fill-q" style="width:${(s.qualifications/25)*100}%"></div></div>
+          <div class="strip"><div class="strip-fill fill-e" style="width:${(s.entrepreneurial/25)*100}%"></div></div>
+          <div class="strip"><div class="strip-fill fill-a" style="width:${(s.academic/25)*100}%"></div></div>
+          <div class="strip"><div class="strip-fill fill-m" style="width:${(s.mission/25)*100}%"></div></div>
+        </div>
+        <div class="card-footer">
+          ${c.diversityNote?`<div class="diversity-note">★ ${c.diversityNote}</div>`:'<div></div>'}
+          <div class="card-tags">${(c.analysis.strengths||[]).slice(0,2).map(st=>`<div class="card-tag">${st.length>22?st.slice(0,22)+'…':st}</div>`).join('')}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectCandidate(id){
+  selectedId=id;
+  const c=[...candidates.bd,...candidates.acct].find(x=>x.id===id);
+  if(!c) return;
+  renderList();
+  document.getElementById('empty-detail').style.display='none';
+  const panel=document.getElementById('detail-panel');
+  panel.classList.add('visible'); panel.style.display='flex';
+  const a=c.analysis,s=a.scores;
+  panel.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
+      <div>
+        <div class="detail-name">${c.name}</div>
+        <div class="detail-role">${c.role==='bd'?'Sr. Business Development Executive':'Sr. Accountant / Accounting Manager'}</div>
+        ${c.diversityNote?`<div class="detail-diversity">★ ${c.diversityNote}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="detail-score-num ${sc(a.total)}">${a.total}</div>
+        <div class="detail-score-label">/ 100 · ${a.grade} · ${a.fitLevel}</div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Score Breakdown</div>
+      ${sr('Qualifications Match',s.qualifications,'fill-q')}
+      ${sr('Entrepreneurial Spirit',s.entrepreneurial,'fill-e')}
+      ${sr('Academic Credentials',s.academic,'fill-a')}
+      ${sr('Mission &amp; Equity Alignment',s.mission,'fill-m')}
+    </div>
+    <div>
+      <div class="section-label">Pipeline Status</div>
+      <div class="status-selector">
+        ${['new','screening','interview','finalist','declined'].map(st=>`<button class="status-btn${c.status===st?' s-active':''}" onclick="updateStatus('${c.id}','${st}',this)">${st[0].toUpperCase()+st.slice(1)}</button>`).join('')}
+      </div>
+    </div>
+    <div class="analysis-block"><div class="analysis-label">💡 AI Hiring Recommendation</div><div class="analysis-text">${a.hiringRecommendation||'—'}</div></div>
+    <div class="analysis-block"><div class="analysis-label">✅ Strengths</div><div class="tags-row">${(a.strengths||[]).map(st=>`<span class="tag-chip tag-pos">${st}</span>`).join('')}</div></div>
+    <div class="analysis-block"><div class="analysis-label">⚠️ Gaps / Watch Areas</div><div class="tags-row">${(a.gaps||[]).map(g=>`<span class="tag-chip tag-gap">${g}</span>`).join('')}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.72rem">
+      <div class="analysis-block"><div class="analysis-label">🚀 Entrepreneurial Evidence</div><div class="analysis-text">${a.entrepreneurialEvidence||'—'}</div></div>
+      <div class="analysis-block"><div class="analysis-label">🎓 Academic Highlight</div><div class="analysis-text">${a.academicHighlight||'—'}</div></div>
+    </div>
+    <div class="analysis-block"><div class="analysis-label">⚖️ Mission &amp; Equity Alignment</div><div class="analysis-text">${a.missionNote||'—'}</div></div>
+    <div>
+      <div class="section-label">Recruiter Notes</div>
+      <textarea class="notes-area" placeholder="Add interview notes, impressions, next steps..." onchange="updateNotes('${c.id}',this.value)">${c.notes}</textarea>
+    </div>
+    <div style="text-align:center;padding-bottom:0.5rem">
+      <button onclick="removeCandidate('${c.id}')" style="background:none;border:1px solid var(--border-dark);border-radius:6px;padding:0.38rem 0.88rem;color:var(--red);font-size:0.7rem;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;transition:all 0.14s" onmouseover="this.style.background='var(--red-pale)'" onmouseout="this.style.background='none'">🗑 Remove Candidate</button>
+    </div>`;
+}
+
+function sr(label,val,cls){ return `<div class="score-row"><div class="score-row-label">${label}</div><div class="score-row-bar"><div class="score-row-fill ${cls}" style="width:${(val/25)*100}%"></div></div><div class="score-row-num">${val}<span style="color:var(--text-dim);font-size:0.58rem">/25</span></div></div>`; }
+
+function updateStatus(id,status,btn){
+  const c=[...candidates.bd,...candidates.acct].find(x=>x.id===id);
+  if(!c) return;
+  c.status=status;
+  btn.closest('.status-selector').querySelectorAll('.status-btn').forEach(b=>b.classList.remove('s-active'));
+  btn.classList.add('s-active');
+  saveData(); renderList();
+}
+
+function updateNotes(id,val){
+  const c=[...candidates.bd,...candidates.acct].find(x=>x.id===id);
+  if(c){ c.notes=val; saveData(); }
+}
+
+function removeCandidate(id){
+  if(!confirm('Remove this candidate?')) return;
+  candidates.bd=candidates.bd.filter(c=>c.id!==id);
+  candidates.acct=candidates.acct.filter(c=>c.id!==id);
+  selectedId=null; saveData(); showEmptyDetail(); renderList();
+}
+
+function showEmptyDetail(){ document.getElementById('empty-detail').style.display=''; const p=document.getElementById('detail-panel'); p.classList.remove('visible'); p.style.display='none'; }
+function sc(n){ return n>=80?'sc-excellent':n>=65?'sc-good':n>=50?'sc-fair':'sc-low'; }
+function gc(g){ return g==='A'?'sc-excellent':g==='B'?'sc-good':g==='C'?'sc-fair':'sc-low'; }
+
+initApiKey();
+</script>
+</body>
+</html>
